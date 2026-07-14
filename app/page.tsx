@@ -42,7 +42,7 @@ export default function HomePage() {
           <div className="relative">
             <div className="relative aspect-[4/3] overflow-hidden rounded-2xl">
               <Image
-                src="/hero-product.png"
+                src="https://images.pexels.com/photos/3394651/pexels-photo-3394651.jpeg?auto=compress&cs=tinysrgb&w=1200"
                 alt="Featured ELUX headphones"
                 fill
                 priority

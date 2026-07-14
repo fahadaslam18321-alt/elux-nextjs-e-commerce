@@ -27,7 +27,8 @@ export const products: Product[] = [
     price: 349,
     rating: 4.8,
     reviews: 1284,
-    image: "/products/aura-headphones.png",
+    image:
+      "https://images.pexels.com/photos/3394651/pexels-photo-3394651.jpeg?auto=compress&cs=tinysrgb&w=800",
     featured: true,
     badge: "Best Seller",
   },
@@ -41,7 +42,8 @@ export const products: Product[] = [
     price: 199,
     rating: 4.6,
     reviews: 842,
-    image: "/products/pulse-earbuds.png",
+    image:
+      "https://images.pexels.com/photos/3780681/pexels-photo-3780681.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   {
     id: "chrono-watch",
@@ -53,7 +55,8 @@ export const products: Product[] = [
     price: 429,
     rating: 4.7,
     reviews: 967,
-    image: "/products/chrono-watch.png",
+    image:
+      "https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=800",
     featured: true,
     badge: "New",
   },
@@ -67,7 +70,8 @@ export const products: Product[] = [
     price: 129,
     rating: 4.4,
     reviews: 531,
-    image: "/products/flex-band.png",
+    image:
+      "https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   {
     id: "nova-laptop",
@@ -79,7 +83,8 @@ export const products: Product[] = [
     price: 1299,
     rating: 4.9,
     reviews: 402,
-    image: "/products/nova-laptop.png",
+    image:
+      "https://images.pexels.com/photos/18105/pexels-photo-18105.jpeg?auto=compress&cs=tinysrgb&w=800",
     featured: true,
     badge: "Editor's Choice",
   },
@@ -93,7 +98,8 @@ export const products: Product[] = [
     price: 79,
     rating: 4.5,
     reviews: 288,
-    image: "/products/glide-mouse.png",
+    image:
+      "https://images.pexels.com/photos/2115256/pexels-photo-2115256.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   {
     id: "halo-speaker",
@@ -105,7 +111,8 @@ export const products: Product[] = [
     price: 179,
     rating: 4.6,
     reviews: 654,
-    image: "/products/halo-speaker.png",
+    image:
+      "https://images.pexels.com/photos/127876/pexels-photo-127876.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   {
     id: "lumen-lamp",
@@ -117,7 +124,8 @@ export const products: Product[] = [
     price: 149,
     rating: 4.7,
     reviews: 219,
-    image: "/products/lumen-lamp.png",
+    image:
+      "https://images.pexels.com/photos/1112598/pexels-photo-1112598.jpeg?auto=compress&cs=tinysrgb&w=800",
     badge: "New",
   },
   {
@@ -130,7 +138,8 @@ export const products: Product[] = [
     price: 1599,
     rating: 4.9,
     reviews: 176,
-    image: "/products/vista-camera.png",
+    image:
+      "https://images.pexels.com/photos/90946/pexels-photo-90946.jpeg?auto=compress&cs=tinysrgb&w=800",
     featured: true,
     badge: "Best Seller",
   },
@@ -144,7 +153,8 @@ export const products: Product[] = [
     price: 899,
     rating: 4.8,
     reviews: 143,
-    image: "/products/orbit-drone.png",
+    image:
+      "https://images.pexels.com/photos/336232/pexels-photo-336232.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
 ]
 
