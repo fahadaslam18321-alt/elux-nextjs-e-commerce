@@ -84,7 +84,7 @@ export const products: Product[] = [
     rating: 4.9,
     reviews: 402,
     image:
-      "https://images.pexels.com/photos/18105/pexels-photo-18105.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600",
     featured: true,
     badge: "Editor's Choice",
   },
