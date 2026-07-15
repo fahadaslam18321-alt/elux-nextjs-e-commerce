@@ -84,7 +84,7 @@ export const products: Product[] = [
     rating: 4.9,
     reviews: 402,
     image:
-      "https://images.pexels.com/photos/18105/pexels-photo.jpg?auto=compress&cs=tinysrgb&w=600",
+      "https://images.pexels.com/photos/18105/pexels-photo-18105.jpeg?auto=compress&cs=tinysrgb&w=800",
     featured: true,
     badge: "Editor's Choice",
   },
@@ -112,7 +112,7 @@ export const products: Product[] = [
     rating: 4.6,
     reviews: 654,
     image:
-      "https://images.pexels.com/photos/4790255/pexels-photo-4790255.jpeg?auto=compress&cs=tinysrgb&w=600",
+      "https://images.pexels.com/photos/1666755/pexels-photo-1666755.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   {
     id: "lumen-lamp",

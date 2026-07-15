@@ -95,7 +95,6 @@ export function Navbar() {
               </span>
             )}
           </Link>
-         
         </div>
       </div>
 
@@ -131,13 +130,6 @@ export function Navbar() {
               {c}
             </Link>
           ))}
-          <Link
-            href="/admin"
-            onClick={() => setMobileOpen(false)}
-            className="block rounded-md px-2 py-2 text-sm hover:bg-secondary"
-          >
-            Admin Dashboard
-          </Link>
         </div>
       </div>
     </header>
