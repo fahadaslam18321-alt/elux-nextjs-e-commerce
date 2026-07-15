@@ -1,5 +1,31 @@
-"use client"
+"use client";
 
+import { useState, useEffect } from "react";
+
+export default function AdminPage() {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  useEffect(() => {
+    // Jab page load hoga, ye user se password mange ga
+    const password = prompt("Enter Admin Password to access dashboard:");
+    if (password === "Fahad1234") { 
+      setIsAuthenticated(true);
+    } else {
+      alert("Access Denied! Incorrect Password.");
+      window.location.href = "/";
+    }
+  }, []);
+
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-lg font-medium text-gray-600">Verifying Admin Access...</p>
+      </div>
+    );
+  }
+
+  // YAHAN AAPKA PEHLE SE MAUJOOD ADMIN PAGE KA BAKI CODE AYEGA (return statement wagera)
+}
 import Image from "next/image"
 import { useMemo, useState } from "react"
 import {
