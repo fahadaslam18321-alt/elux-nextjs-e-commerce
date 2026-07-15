@@ -112,7 +112,7 @@ export const products: Product[] = [
     rating: 4.6,
     reviews: 654,
     image:
-      "https://images.pexels.com/photos/127876/pexels-photo-127876.jpeg?auto=compress&cs=tinysrgb&w=800",
+      "https://images.pexels.com/photos/4790255/pexels-photo-4790255.jpeg?auto=compress&cs=tinysrgb&w=600",
   },
   {
     id: "lumen-lamp",
