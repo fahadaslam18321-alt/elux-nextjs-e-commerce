@@ -95,12 +95,7 @@ export function Navbar() {
               </span>
             )}
           </Link>
-          <Link
-            href="/admin"
-            className="ml-1 hidden rounded-full border border-border px-3 py-1.5 text-sm transition-colors hover:bg-secondary sm:block"
-          >
-            Admin
-          </Link>
+         
         </div>
       </div>
 
