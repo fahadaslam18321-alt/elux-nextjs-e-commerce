@@ -1,33 +1,7 @@
 "use client";
 
-import { useState, useEffect } from "react";
-
-export default function AdminPage() {
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  useEffect(() => {
-    // Jab page load hoga, ye user se password mange ga
-    const password = prompt("Enter Admin Password to access dashboard:");
-    if (password === "Fahad1234") { 
-      setIsAuthenticated(true);
-    } else {
-      alert("Access Denied! Incorrect Password.");
-      window.location.href = "/";
-    }
-  }, []);
-
-  if (!isAuthenticated) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gray-50">
-        <p className="text-lg font-medium text-gray-600">Verifying Admin Access...</p>
-      </div>
-    );
-  }
-
-  // YAHAN AAPKA PEHLE SE MAUJOOD ADMIN PAGE KA BAKI CODE AYEGA (return statement wagera)
-}
-import Image from "next/image"
-import { useMemo, useState } from "react"
+import { useState, useEffect, useMemo } from "react";
+import Image from "next/image";
 import {
   Package,
   Users,
@@ -37,9 +11,9 @@ import {
   Trash2,
   Search,
   type LucideIcon,
-} from "lucide-react"
-import { products as seedProducts, type Product } from "@/lib/products"
-import { formatPrice, cn } from "@/lib/utils"
+} from "lucide-react";
+import { products as seedProducts, type Product } from "@/lib/products";
+import { formatPrice, cn } from "@/lib/utils";
 
 const revenueByMonth = [
   { month: "Jan", value: 42000 },
@@ -50,21 +24,33 @@ const revenueByMonth = [
   { month: "Jun", value: 72900 },
   { month: "Jul", value: 68100 },
   { month: "Aug", value: 81300 },
-]
+];
 
 export default function AdminPage() {
-  const [items, setItems] = useState<Product[]>(seedProducts)
-  const [query, setQuery] = useState("")
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [items, setItems] = useState<Product[]>(seedProducts);
+  const [query, setQuery] = useState("");
 
-  const totalRevenue = revenueByMonth.reduce((s, m) => s + m.value, 0)
-  const maxRevenue = Math.max(...revenueByMonth.map((m) => m.value))
+  useEffect(() => {
+    // Prompt the user for a password when the page loads
+    const password = prompt("Enter Admin Password to access dashboard:");
+    if (password === "Fahad1234") { 
+      setIsAuthenticated(true);
+    } else {
+      alert("Access Denied! Incorrect Password.");
+      window.location.href = "/";
+    }
+  }, []);
+
+  const totalRevenue = revenueByMonth.reduce((s, m) => s + m.value, 0);
+  const maxRevenue = Math.max(...revenueByMonth.map((m) => m.value));
 
   const stats: { icon: LucideIcon; label: string; value: string; delta: string }[] = [
     { icon: DollarSign, label: "Revenue", value: formatPrice(totalRevenue), delta: "+12.4%" },
     { icon: ShoppingCart, label: "Orders", value: "1,284", delta: "+8.2%" },
     { icon: Users, label: "Customers", value: "3,942", delta: "+5.1%" },
     { icon: Package, label: "Products", value: String(items.length), delta: "Live" },
-  ]
+  ];
 
   const filtered = useMemo(
     () =>
@@ -74,12 +60,22 @@ export default function AdminPage() {
           p.category.toLowerCase().includes(query.toLowerCase()),
       ),
     [items, query],
-  )
+  );
 
   function removeProduct(id: string) {
-    setItems((prev) => prev.filter((p) => p.id !== id))
+    setItems((prev) => prev.filter((p) => p.id !== id));
   }
 
+  // If not authenticated yet, show a clean loading screen
+  if (!isAuthenticated) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-lg font-medium text-gray-600">Verifying Admin Access...</p>
+      </div>
+    );
+  }
+
+  // Admin Dashboard Content (Only renders if authenticated)
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
       <div className="flex flex-wrap items-end justify-between gap-4">
@@ -234,5 +230,5 @@ export default function AdminPage() {
         </div>
       </div>
     </div>
-  )
+  );
 }
