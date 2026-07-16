@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import Image from "next/image";
 import {
   Package,
@@ -10,7 +10,6 @@ import {
   TrendingUp,
   Trash2,
   Search,
-  Lock,
   type LucideIcon,
 } from "lucide-react";
 import { products as seedProducts, type Product } from "@/lib/products";
@@ -29,21 +28,19 @@ const revenueByMonth = [
 
 export default function AdminPage() {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  const [passwordInput, setPasswordInput] = useState("");
-  const [error, setError] = useState("");
-  
   const [items, setItems] = useState<Product[]>(seedProducts);
   const [query, setQuery] = useState("");
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (passwordInput === "Fahad1234") {
+  useEffect(() => {
+    // Prompt the user for a password when the page loads
+    const password = prompt("Enter Admin Password to access dashboard:");
+    if (password === "Fahad1234") { 
       setIsAuthenticated(true);
-      setError("");
     } else {
-      setError("Incorrect Password! Access Denied.");
+      alert("Access Denied! Incorrect Password.");
+      window.location.href = "/";
     }
-  };
+  }, []);
 
   const totalRevenue = revenueByMonth.reduce((s, m) => s + m.value, 0);
   const maxRevenue = Math.max(...revenueByMonth.map((m) => m.value));
@@ -69,49 +66,11 @@ export default function AdminPage() {
     setItems((prev) => prev.filter((p) => p.id !== id));
   }
 
-  // Beautiful Authentication Screen
+  // If not authenticated yet, show a clean loading screen
   if (!isAuthenticated) {
     return (
-      <div className="flex items-center justify-center min-h-[80vh] bg-background px-4">
-        <div className="w-full max-w-md rounded-2xl border border-border bg-card p-8 shadow-sm">
-          <div className="flex flex-col items-center text-center">
-            <div className="flex size-12 items-center justify-center rounded-full bg-primary/10 text-primary">
-              <Lock className="size-6" />
-            </div>
-            <h2 className="mt-4 text-2xl font-semibold tracking-tight">Admin Portal</h2>
-            <p className="mt-1.5 text-sm text-muted-foreground">
-              Enter password to access the store management dashboard.
-            </p>
-          </div>
-
-          <form onSubmit={handleLogin} className="mt-6 space-y-4">
-            <div>
-              <label htmlFor="password" className="text-sm font-medium text-foreground">
-                Password
-              </label>
-              <input
-                id="password"
-                type="password"
-                placeholder="••••••••"
-                value={passwordInput}
-                onChange={(e) => setPasswordInput(e.target.value)}
-                className="mt-1.5 w-full rounded-lg border border-input bg-background px-4 py-2 text-sm outline-none focus:border-ring"
-                required
-              />
-            </div>
-
-            {error && (
-              <p className="text-xs font-medium text-destructive">{error}</p>
-            )}
-
-            <button
-              type="submit"
-              className="w-full rounded-lg bg-primary py-2 text-sm font-medium text-primary-foreground transition hover:opacity-90"
-            >
-              Verify Access
-            </button>
-          </form>
-        </div>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <p className="text-lg font-medium text-gray-600">Verifying Admin Access...</p>
       </div>
     );
   }

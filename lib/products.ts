@@ -56,7 +56,7 @@ export const products: Product[] = [
     rating: 4.7,
     reviews: 967,
     image:
-      "https://images.unsplash.com/photo-1579586337278-3befd40fd17a?auto=format&fit=crop&w=600&q=80",
+      "https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=800",
     featured: true,
     badge: "New",
   },
@@ -71,7 +71,7 @@ export const products: Product[] = [
     rating: 4.4,
     reviews: 531,
     image:
-      "https://images.unsplash.com/photo-1575311373937-040b8e1fd5b6?auto=format&fit=crop&w=600&q=80",
+      "https://images.pexels.com/photos/437037/pexels-photo-437037.jpeg?auto=compress&cs=tinysrgb&w=800",
   },
   {
     id: "nova-laptop",
