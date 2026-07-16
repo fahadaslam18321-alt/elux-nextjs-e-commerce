@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { Search } from "lucide-react"
-import { products, categories, type Category } from "@/lib/products"
+import { useStore } from "@/context/store-context"
+import { type Category } from "@/lib/products"
 import { ProductCard } from "@/components/product-card"
 import { cn } from "@/lib/utils"
 
@@ -17,6 +18,7 @@ const sortOptions: { key: SortKey; label: string }[] = [
 ]
 
 export function ShopView() {
+  const { products, categories, loading } = useStore()
   const searchParams = useSearchParams()
   const router = useRouter()
 
@@ -58,7 +60,7 @@ export function ShopView() {
         list.sort((a, b) => Number(Boolean(b.featured)) - Number(Boolean(a.featured)))
     }
     return list
-  }, [categoryParam, queryParam, sort])
+  }, [products, categoryParam, queryParam, sort])
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
@@ -72,7 +74,7 @@ export function ShopView() {
               Results for <span className="font-medium text-foreground">&ldquo;{queryParam}&rdquo;</span> —{" "}
             </>
           ) : null}
-          {filtered.length} {filtered.length === 1 ? "product" : "products"}
+          {loading ? "Loading…" : `${filtered.length} ${filtered.length === 1 ? "product" : "products"}`}
         </p>
       </div>
 
@@ -127,7 +129,13 @@ export function ShopView() {
             </label>
           </div>
 
-          {filtered.length > 0 ? (
+          {loading ? (
+            <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <div key={i} className="aspect-square animate-pulse rounded-xl bg-secondary" />
+              ))}
+            </div>
+          ) : filtered.length > 0 ? (
             <div className="grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3">
               {filtered.map((p) => (
                 <ProductCard key={p.id} product={p} />

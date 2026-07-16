@@ -40,7 +40,7 @@ export function ProductCard({ product }: { product: Product }) {
         </button>
 
         <button
-          onClick={() => addToCart(product.id)}
+          onClick={() => addToCart(product)}
           className="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-primary px-3 py-2 text-xs font-medium text-primary-foreground opacity-0 shadow-md transition-all duration-300 group-hover:opacity-100 focus-visible:opacity-100"
         >
           <Plus className="size-4" /> Add

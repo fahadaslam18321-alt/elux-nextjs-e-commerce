@@ -1,7 +1,8 @@
 "use client"
 
-import { createContext, useContext, useEffect, useMemo, useReducer, type ReactNode } from "react"
-import { products, type Product } from "@/lib/products"
+import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback, type ReactNode } from "react"
+import { supabase } from "@/lib/supabase"
+import { categories as allCategories, FALLBACK_IMAGE, type Product, type Category } from "@/lib/products"
 
 const STORAGE_KEY = "elux-store"
 
@@ -16,7 +17,7 @@ type State = {
 }
 
 type Action =
-  | { type: "ADD_TO_CART"; productId: string; quantity?: number }
+  | { type: "ADD_TO_CART"; product: Product; quantity?: number }
   | { type: "REMOVE_FROM_CART"; productId: string }
   | { type: "SET_QUANTITY"; productId: string; quantity: number }
   | { type: "CLEAR_CART" }
@@ -25,14 +26,13 @@ type Action =
 function reducer(state: State, action: Action): State {
   switch (action.type) {
     case "ADD_TO_CART": {
-      const product = products.find((p) => p.id === action.productId)
-      if (!product) return state
-      const existing = state.cart.find((i) => i.product.id === action.productId)
+      const product = action.product
+      const existing = state.cart.find((i) => i.product.id === product.id)
       if (existing) {
         return {
           ...state,
           cart: state.cart.map((i) =>
-            i.product.id === action.productId
+            i.product.id === product.id
               ? { ...i, quantity: i.quantity + (action.quantity ?? 1) }
               : i,
           ),
@@ -69,17 +69,36 @@ function reducer(state: State, action: Action): State {
   }
 }
 
+type NewProductInput = {
+  name: string
+  price: number
+  category: Category
+  description: string
+  tagline: string
+  image: string
+  stock: number
+  featured?: boolean
+  badge?: string
+}
+
 type StoreContextValue = {
+  products: Product[]
+  categories: Category[]
+  loading: boolean
   cart: CartItem[]
   wishlist: string[]
   cartCount: number
   cartTotal: number
-  addToCart: (productId: string, quantity?: number) => void
+  addToCart: (product: Product, quantity?: number) => void
   removeFromCart: (productId: string) => void
   setQuantity: (productId: string, quantity: number) => void
   clearCart: () => void
   toggleWishlist: (productId: string) => void
   isInWishlist: (productId: string) => boolean
+  getProduct: (id: string) => Product | undefined
+  addProduct: (input: NewProductInput) => Promise<{ error: string | null }>
+  deleteProduct: (id: string) => Promise<{ error: string | null }>
+  placeOrder: (email: string) => Promise<{ error: string | null; orderId: string | null }>
 }
 
 const StoreContext = createContext<StoreContextValue | null>(null)
@@ -90,13 +109,7 @@ function init(): State {
     const raw = window.localStorage.getItem(STORAGE_KEY)
     if (!raw) return { cart: [], wishlist: [] }
     const parsed = JSON.parse(raw) as { cart?: { productId: string; quantity: number }[]; wishlist?: string[] }
-    const cart: CartItem[] = (parsed.cart ?? [])
-      .map((entry) => {
-        const product = products.find((p) => p.id === entry.productId)
-        return product ? { product, quantity: entry.quantity } : null
-      })
-      .filter((i): i is CartItem => i !== null)
-    return { cart, wishlist: parsed.wishlist ?? [] }
+    return { cart: [], wishlist: parsed.wishlist ?? [] }
   } catch {
     return { cart: [], wishlist: [] }
   }
@@ -104,7 +117,45 @@ function init(): State {
 
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, init)
+  const [products, setProducts] = useState<Product[]>([])
+  const [loading, setLoading] = useState(true)
 
+  // Fetch products from Supabase and subscribe to realtime changes
+  useEffect(() => {
+    let mounted = true
+
+    async function fetchProducts() {
+      const { data, error } = await supabase
+        .from("products")
+        .select("*")
+        .order("created_at", { ascending: false })
+
+      if (!mounted) return
+      if (error) {
+        console.error("Failed to fetch products:", error.message)
+        setLoading(false)
+        return
+      }
+      setProducts(data as Product[])
+      setLoading(false)
+    }
+
+    fetchProducts()
+
+    const channel = supabase
+      .channel("products-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "products" }, () => {
+        fetchProducts()
+      })
+      .subscribe()
+
+    return () => {
+      mounted = false
+      supabase.removeChannel(channel)
+    }
+  }, [])
+
+  // Persist cart + wishlist to localStorage
   useEffect(() => {
     const payload = {
       cart: state.cart.map((i) => ({ productId: i.product.id, quantity: i.quantity })),
@@ -113,26 +164,124 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     try {
       window.localStorage.setItem(STORAGE_KEY, JSON.stringify(payload))
     } catch {
-      // ignore write errors (e.g. storage disabled)
+      // ignore write errors
     }
   }, [state])
+
+  // Reconcile cart items with latest products (so deleted products disappear from cart)
+  useEffect(() => {
+    if (products.length === 0) return
+    const validIds = new Set(products.map((p) => p.id))
+    const hasInvalid = state.cart.some((i) => !validIds.has(i.product.id))
+    if (hasInvalid) {
+      dispatch({ type: "CLEAR_CART" })
+    }
+  }, [products]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const addToCart = useCallback((product: Product, quantity?: number) => {
+    dispatch({ type: "ADD_TO_CART", product, quantity })
+  }, [])
+
+  const removeFromCart = useCallback((productId: string) => {
+    dispatch({ type: "REMOVE_FROM_CART", productId })
+  }, [])
+
+  const setQuantity = useCallback((productId: string, quantity: number) => {
+    dispatch({ type: "SET_QUANTITY", productId, quantity })
+  }, [])
+
+  const clearCart = useCallback(() => dispatch({ type: "CLEAR_CART" }), [])
+
+  const toggleWishlist = useCallback((productId: string) => {
+    dispatch({ type: "TOGGLE_WISHLIST", productId })
+  }, [])
+
+  const isInWishlist = useCallback(
+    (productId: string) => state.wishlist.includes(productId),
+    [state.wishlist],
+  )
+
+  const getProduct = useCallback(
+    (id: string) => products.find((p) => p.id === id),
+    [products],
+  )
+
+  const addProduct = useCallback(async (input: NewProductInput) => {
+    const { error } = await supabase.from("products").insert({
+      name: input.name,
+      tagline: input.tagline || input.name,
+      description: input.description,
+      category: input.category,
+      price: input.price,
+      image: input.image || FALLBACK_IMAGE,
+      stock: input.stock,
+      featured: input.featured ?? false,
+      badge: input.badge ?? null,
+      rating: 4.5,
+      reviews: 0,
+    })
+    return { error: error?.message ?? null }
+  }, [])
+
+  const deleteProduct = useCallback(async (id: string) => {
+    const { error } = await supabase.from("products").delete().eq("id", id)
+    return { error: error?.message ?? null }
+  }, [])
+
+  const placeOrder = useCallback(
+    async (email: string) => {
+      if (state.cart.length === 0) return { error: "Cart is empty", orderId: null }
+
+      const total = state.cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
+
+      const { data: orderData, error: orderError } = await supabase
+        .from("orders")
+        .insert({ email, total, status: "completed" })
+        .select("id")
+        .single()
+
+      if (orderError) return { error: orderError.message, orderId: null }
+
+      const orderItems = state.cart.map((i) => ({
+        order_id: orderData.id,
+        product_id: i.product.id,
+        product_name: i.product.name,
+        quantity: i.quantity,
+        price: i.product.price,
+      }))
+
+      const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
+      if (itemsError) return { error: itemsError.message, orderId: null }
+
+      dispatch({ type: "CLEAR_CART" })
+      return { error: null, orderId: orderData.id }
+    },
+    [state.cart],
+  )
 
   const value = useMemo<StoreContextValue>(() => {
     const cartCount = state.cart.reduce((sum, i) => sum + i.quantity, 0)
     const cartTotal = state.cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
     return {
+      products,
+      categories: allCategories,
+      loading,
       cart: state.cart,
       wishlist: state.wishlist,
       cartCount,
       cartTotal,
-      addToCart: (productId, quantity) => dispatch({ type: "ADD_TO_CART", productId, quantity }),
-      removeFromCart: (productId) => dispatch({ type: "REMOVE_FROM_CART", productId }),
-      setQuantity: (productId, quantity) => dispatch({ type: "SET_QUANTITY", productId, quantity }),
-      clearCart: () => dispatch({ type: "CLEAR_CART" }),
-      toggleWishlist: (productId) => dispatch({ type: "TOGGLE_WISHLIST", productId }),
-      isInWishlist: (productId) => state.wishlist.includes(productId),
+      addToCart,
+      removeFromCart,
+      setQuantity,
+      clearCart,
+      toggleWishlist,
+      isInWishlist,
+      getProduct,
+      addProduct,
+      deleteProduct,
+      placeOrder,
     }
-  }, [state])
+  }, [products, loading, state, addToCart, removeFromCart, setQuantity, clearCart, toggleWishlist, isInWishlist, getProduct, addProduct, deleteProduct, placeOrder])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

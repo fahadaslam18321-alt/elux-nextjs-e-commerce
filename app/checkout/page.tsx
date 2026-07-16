@@ -3,16 +3,16 @@
 import Image from "next/image"
 import Link from "next/link"
 import { useEffect, useState, type FormEvent } from "react"
-import { useRouter } from "next/navigation"
 import { CheckCircle2, Lock, ArrowRight } from "lucide-react"
 import { useStore } from "@/context/store-context"
 import { formatPrice } from "@/lib/utils"
 
 export default function CheckoutPage() {
-  const { cart, cartTotal, cartCount, clearCart } = useStore()
-  const router = useRouter()
+  const { cart, cartTotal, cartCount, placeOrder } = useStore()
   const [placed, setPlaced] = useState(false)
   const [orderId, setOrderId] = useState("")
+  const [error, setError] = useState<string | null>(null)
+  const [submitting, setSubmitting] = useState(false)
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
@@ -21,11 +21,23 @@ export default function CheckoutPage() {
   const tax = Math.round(cartTotal * 0.08)
   const total = cartTotal + shipping + tax
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault()
-    setOrderId("ELX-" + Math.floor(100000 + Math.random() * 900000))
+    setError(null)
+    setSubmitting(true)
+
+    const formData = new FormData(e.currentTarget as HTMLFormElement)
+    const email = String(formData.get("email") ?? "")
+
+    const { error: orderError, orderId: newOrderId } = await placeOrder(email)
+    if (orderError) {
+      setError(orderError)
+      setSubmitting(false)
+      return
+    }
+    setOrderId(newOrderId ?? "ELX-UNKNOWN")
     setPlaced(true)
-    clearCart()
+    setSubmitting(false)
     window.scrollTo({ top: 0, behavior: "smooth" })
   }
 
@@ -36,7 +48,7 @@ export default function CheckoutPage() {
         <h1 className="mt-6 text-3xl font-semibold tracking-tight">Order confirmed</h1>
         <p className="mt-2 text-muted-foreground">
           Thank you for your purchase. Your order{" "}
-          <span className="font-medium text-foreground">{orderId}</span> is being processed and a
+          <span className="font-medium text-foreground">{orderId.slice(0, 8)}</span> is being processed and a
           confirmation has been sent to your email.
         </p>
         <Link
@@ -103,6 +115,12 @@ export default function CheckoutPage() {
               <Field label="CVC" name="cvc" placeholder="123" />
             </div>
           </fieldset>
+
+          {error && (
+            <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">
+              {error}
+            </p>
+          )}
         </div>
 
         <div className="lg:col-span-1">
@@ -147,9 +165,10 @@ export default function CheckoutPage() {
 
             <button
               type="submit"
-              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90"
+              disabled={submitting}
+              className="mt-6 flex w-full items-center justify-center gap-2 rounded-full bg-primary px-6 py-3 text-sm font-medium text-primary-foreground transition hover:opacity-90 disabled:opacity-50"
             >
-              Place order — {formatPrice(total)}
+              {submitting ? "Placing order…" : `Place order — ${formatPrice(total)}`}
             </button>
           </div>
         </div>

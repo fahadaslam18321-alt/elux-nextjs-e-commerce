@@ -16,7 +16,7 @@ export function ProductDetail({ product, related }: { product: Product; related:
   const wished = isInWishlist(product.id)
 
   function handleAdd() {
-    addToCart(product.id, quantity)
+    addToCart(product, quantity)
     setAdded(true)
     setTimeout(() => setAdded(false), 1800)
   }

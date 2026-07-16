@@ -1,10 +1,13 @@
+"use client"
+
 import Image from "next/image"
 import Link from "next/link"
 import { ArrowRight, Truck, ShieldCheck, RotateCcw } from "lucide-react"
-import { products, categories } from "@/lib/products"
+import { useStore } from "@/context/store-context"
 import { ProductCard } from "@/components/product-card"
 
 export default function HomePage() {
+  const { products, categories, loading } = useStore()
   const featured = products.filter((p) => p.featured)
 
   return (
@@ -110,11 +113,19 @@ export default function HomePage() {
             View all <ArrowRight className="size-4" />
           </Link>
         </div>
-        <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
-          {featured.map((p) => (
-            <ProductCard key={p.id} product={p} />
-          ))}
-        </div>
+        {loading ? (
+          <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+            {Array.from({ length: 4 }).map((_, i) => (
+              <div key={i} className="aspect-square animate-pulse rounded-xl bg-secondary" />
+            ))}
+          </div>
+        ) : (
+          <div className="mt-8 grid grid-cols-2 gap-x-4 gap-y-8 sm:grid-cols-3 lg:grid-cols-4">
+            {featured.map((p) => (
+              <ProductCard key={p.id} product={p} />
+            ))}
+          </div>
+        )}
       </section>
     </div>
   )

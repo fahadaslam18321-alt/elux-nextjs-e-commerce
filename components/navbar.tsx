@@ -5,11 +5,10 @@ import { useRouter, useSearchParams } from "next/navigation"
 import { useEffect, useState, type FormEvent } from "react"
 import { Heart, Search, ShoppingBag, Menu, X } from "lucide-react"
 import { useStore } from "@/context/store-context"
-import { categories } from "@/lib/products"
 import { cn } from "@/lib/utils"
 
 export function Navbar() {
-  const { cartCount, wishlist } = useStore()
+  const { cartCount, wishlist, categories } = useStore()
   const router = useRouter()
   const searchParams = useSearchParams()
   const [query, setQuery] = useState(searchParams.get("q") ?? "")

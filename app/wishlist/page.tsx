@@ -4,11 +4,10 @@ import Link from "next/link"
 import { useEffect, useState } from "react"
 import { Heart, ArrowRight } from "lucide-react"
 import { useStore } from "@/context/store-context"
-import { products } from "@/lib/products"
 import { ProductCard } from "@/components/product-card"
 
 export default function WishlistPage() {
-  const { wishlist } = useStore()
+  const { wishlist, products, loading } = useStore()
   const [mounted, setMounted] = useState(false)
 
   useEffect(() => setMounted(true), [])
