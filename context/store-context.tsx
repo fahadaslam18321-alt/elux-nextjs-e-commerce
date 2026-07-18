@@ -207,25 +207,43 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
 
   const addProduct = useCallback(async (input: NewProductInput) => {
-    const { error } = await supabase.from("products").insert({
-      name: input.name,
-      tagline: input.tagline || input.name,
-      description: input.description,
-      category: input.category,
-      price: input.price,
-      image: input.image || FALLBACK_IMAGE,
-      stock: input.stock,
-      featured: input.featured ?? false,
-      badge: input.badge ?? null,
-      rating: 4.5,
-      reviews: 0,
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/products`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+      body: JSON.stringify({
+        name: input.name,
+        tagline: input.tagline || input.name,
+        description: input.description,
+        category: input.category,
+        price: input.price,
+        image: input.image || FALLBACK_IMAGE,
+        stock: input.stock,
+        featured: input.featured ?? false,
+        badge: input.badge ?? null,
+      }),
     })
-    return { error: error?.message ?? null }
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      return { error: body.error ?? `Failed (${res.status})` }
+    }
+    return { error: null }
   }, [])
 
   const deleteProduct = useCallback(async (id: string) => {
-    const { error } = await supabase.from("products").delete().eq("id", id)
-    return { error: error?.message ?? null }
+    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/products/${id}`, {
+      method: "DELETE",
+      headers: {
+        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+      },
+    })
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}))
+      return { error: body.error ?? `Failed (${res.status})` }
+    }
+    return { error: null }
   }, [])
 
   const placeOrder = useCallback(
@@ -233,28 +251,30 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (state.cart.length === 0) return { error: "Cart is empty", orderId: null }
 
       const total = state.cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
-
-      const { data: orderData, error: orderError } = await supabase
-        .from("orders")
-        .insert({ email, total, status: "completed" })
-        .select("id")
-        .single()
-
-      if (orderError) return { error: orderError.message, orderId: null }
-
-      const orderItems = state.cart.map((i) => ({
-        order_id: orderData.id,
+      const items = state.cart.map((i) => ({
         product_id: i.product.id,
         product_name: i.product.name,
         quantity: i.quantity,
         price: i.product.price,
       }))
 
-      const { error: itemsError } = await supabase.from("order_items").insert(orderItems)
-      if (itemsError) return { error: itemsError.message, orderId: null }
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/orders`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({ email, total, items }),
+      })
 
+      if (!res.ok) {
+        const body = await res.json().catch(() => ({}))
+        return { error: body.error ?? `Failed (${res.status})`, orderId: null }
+      }
+
+      const data = await res.json().catch(() => ({}))
       dispatch({ type: "CLEAR_CART" })
-      return { error: null, orderId: orderData.id }
+      return { error: null, orderId: data.orderId ?? null }
     },
     [state.cart],
   )
