@@ -2,7 +2,7 @@
 
 import { createContext, useContext, useEffect, useMemo, useReducer, useState, useCallback, type ReactNode } from "react"
 import { supabase } from "@/lib/supabase"
-import { categories as allCategories, FALLBACK_IMAGE, type Product, type Category } from "@/lib/products"
+import { categories as allCategories, FALLBACK_IMAGE, FALLBACK_PRODUCTS, type Product, type Category } from "@/lib/products"
 
 const STORAGE_KEY = "elux-store"
 
@@ -131,8 +131,9 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         .order("created_at", { ascending: false })
 
       if (!mounted) return
-      if (error) {
-        console.error("Failed to fetch products:", error.message)
+      if (error || !data || data.length === 0) {
+        if (error) console.error("Failed to fetch products:", error.message)
+        setProducts(FALLBACK_PRODUCTS)
         setLoading(false)
         return
       }
