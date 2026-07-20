@@ -5,10 +5,28 @@ import { supabase } from "@/lib/supabase"
 import { categories as allCategories, FALLBACK_IMAGE, FALLBACK_PRODUCTS, type Product, type Category } from "@/lib/products"
 
 const STORAGE_KEY = "elux-store"
+const PRODUCTS_KEY = "elux-products"
+const ORDERS_KEY = "elux-orders"
 
 export type CartItem = {
   product: Product
   quantity: number
+}
+
+export type OrderItem = {
+  product_id: string
+  product_name: string
+  quantity: number
+  price: number
+}
+
+export type Order = {
+  id: string
+  email: string
+  total: number
+  status: string
+  created_at: string
+  items: OrderItem[]
 }
 
 type State = {
@@ -87,6 +105,7 @@ type StoreContextValue = {
   loading: boolean
   cart: CartItem[]
   wishlist: string[]
+  orders: Order[]
   cartCount: number
   cartTotal: number
   addToCart: (product: Product, quantity?: number) => void
@@ -115,12 +134,35 @@ function init(): State {
   }
 }
 
+function loadLocalProducts(): Product[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = window.localStorage.getItem(PRODUCTS_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as Product[]
+  } catch {
+    return []
+  }
+}
+
+function loadLocalOrders(): Order[] {
+  if (typeof window === "undefined") return []
+  try {
+    const raw = window.localStorage.getItem(ORDERS_KEY)
+    if (!raw) return []
+    return JSON.parse(raw) as Order[]
+  } catch {
+    return []
+  }
+}
+
 export function StoreProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, undefined, init)
   const [products, setProducts] = useState<Product[]>([])
+  const [orders, setOrders] = useState<Order[]>([])
   const [loading, setLoading] = useState(true)
 
-  // Fetch products from Supabase and subscribe to realtime changes
+  // Fetch products from Supabase, fall back to localStorage then FALLBACK_PRODUCTS
   useEffect(() => {
     let mounted = true
 
@@ -133,7 +175,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (!mounted) return
       if (error || !data || data.length === 0) {
         if (error) console.error("Failed to fetch products:", error.message)
-        setProducts(FALLBACK_PRODUCTS)
+        const local = loadLocalProducts()
+        setProducts(local.length > 0 ? local : FALLBACK_PRODUCTS)
         setLoading(false)
         return
       }
@@ -156,6 +199,11 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  // Load orders from localStorage on mount
+  useEffect(() => {
+    setOrders(loadLocalOrders())
+  }, [])
+
   // Persist cart + wishlist to localStorage
   useEffect(() => {
     const payload = {
@@ -168,6 +216,25 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       // ignore write errors
     }
   }, [state])
+
+  // Persist products to localStorage whenever they change
+  useEffect(() => {
+    if (products.length === 0) return
+    try {
+      window.localStorage.setItem(PRODUCTS_KEY, JSON.stringify(products))
+    } catch {
+      // ignore write errors
+    }
+  }, [products])
+
+  // Persist orders to localStorage whenever they change
+  useEffect(() => {
+    try {
+      window.localStorage.setItem(ORDERS_KEY, JSON.stringify(orders))
+    } catch {
+      // ignore write errors
+    }
+  }, [orders])
 
   // Reconcile cart items with latest products (so deleted products disappear from cart)
   useEffect(() => {
@@ -208,41 +275,64 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   )
 
   const addProduct = useCallback(async (input: NewProductInput) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/products`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-      },
-      body: JSON.stringify({
-        name: input.name,
-        tagline: input.tagline || input.name,
-        description: input.description,
-        category: input.category,
-        price: input.price,
-        image: input.image || FALLBACK_IMAGE,
-        stock: input.stock,
-        featured: input.featured ?? false,
-        badge: input.badge ?? null,
-      }),
-    })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      return { error: body.error ?? `Failed (${res.status})` }
+    const newProduct: Product = {
+      id: `local-${Date.now()}`,
+      name: input.name,
+      tagline: input.tagline || input.name,
+      description: input.description,
+      category: input.category,
+      price: input.price,
+      rating: 0,
+      reviews: 0,
+      image: input.image || FALLBACK_IMAGE,
+      stock: input.stock,
+      featured: input.featured ?? false,
+      badge: input.badge ?? null,
     }
+
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/products`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+        body: JSON.stringify({
+          name: input.name,
+          tagline: input.tagline || input.name,
+          description: input.description,
+          category: input.category,
+          price: input.price,
+          image: input.image || FALLBACK_IMAGE,
+          stock: input.stock,
+          featured: input.featured ?? false,
+          badge: input.badge ?? null,
+        }),
+      })
+      if (res.ok) {
+        const data = await res.json().catch(() => ({}))
+        if (data.product?.id) newProduct.id = data.product.id
+      }
+    } catch {
+      // network/API failure — fall back to local-only product
+    }
+
+    setProducts((prev) => [newProduct, ...prev])
     return { error: null }
   }, [])
 
   const deleteProduct = useCallback(async (id: string) => {
-    const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/products/${id}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-      },
-    })
-    if (!res.ok) {
-      const body = await res.json().catch(() => ({}))
-      return { error: body.error ?? `Failed (${res.status})` }
+    setProducts((prev) => prev.filter((p) => p.id !== id))
+
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/products/${id}`, {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+        },
+      })
+    } catch {
+      // network/API failure — product already removed from local state
     }
     return { error: null }
   }, [])
@@ -252,29 +342,41 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       if (state.cart.length === 0) return { error: "Cart is empty", orderId: null }
 
       const total = state.cart.reduce((sum, i) => sum + i.product.price * i.quantity, 0)
-      const items = state.cart.map((i) => ({
+      const items: OrderItem[] = state.cart.map((i) => ({
         product_id: i.product.id,
         product_name: i.product.name,
         quantity: i.quantity,
         price: i.product.price,
       }))
 
-      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/orders`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
-        },
-        body: JSON.stringify({ email, total, items }),
-      })
+      let orderId = `ELX-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
 
-      let orderId: string | null = null
-      if (res.ok) {
-        const data = await res.json().catch(() => ({}))
-        orderId = data.orderId ?? null
-      } else {
-        orderId = `ELX-${Math.random().toString(36).slice(2, 8).toUpperCase()}`
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/store-api/orders`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY}`,
+          },
+          body: JSON.stringify({ email, total, items }),
+        })
+        if (res.ok) {
+          const data = await res.json().catch(() => ({}))
+          if (data.orderId) orderId = data.orderId
+        }
+      } catch {
+        // network/API failure — use local mock order id
       }
+
+      const order: Order = {
+        id: orderId,
+        email,
+        total,
+        status: "Paid",
+        created_at: new Date().toISOString(),
+        items,
+      }
+      setOrders((prev) => [order, ...prev])
       dispatch({ type: "CLEAR_CART" })
       return { error: null, orderId }
     },
@@ -290,6 +392,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       loading,
       cart: state.cart,
       wishlist: state.wishlist,
+      orders,
       cartCount,
       cartTotal,
       addToCart,
@@ -303,7 +406,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
       deleteProduct,
       placeOrder,
     }
-  }, [products, loading, state, addToCart, removeFromCart, setQuantity, clearCart, toggleWishlist, isInWishlist, getProduct, addProduct, deleteProduct, placeOrder])
+  }, [products, loading, state, orders, addToCart, removeFromCart, setQuantity, clearCart, toggleWishlist, isInWishlist, getProduct, addProduct, deleteProduct, placeOrder])
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>
 }

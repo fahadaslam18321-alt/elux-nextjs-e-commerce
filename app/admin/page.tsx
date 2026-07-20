@@ -14,60 +14,14 @@ import {
   X,
   type LucideIcon,
 } from "lucide-react"
-import { useStore } from "@/context/store-context"
-import { supabase } from "@/lib/supabase"
+import { useStore, type OrderItem } from "@/context/store-context"
 import { categories, FALLBACK_IMAGE, type Category } from "@/lib/products"
 import { formatPrice, cn } from "@/lib/utils"
 
-type OrderRow = {
-  id: string
-  email: string
-  total: number
-  status: string
-  created_at: string
-}
-
-type OrderItemRow = {
-  product_id: string | null
-  product_name: string
-  quantity: number
-  price: number
-}
-
 export default function AdminPage() {
-  const { products, loading, addProduct, deleteProduct } = useStore()
+  const { products, loading, orders, addProduct, deleteProduct } = useStore()
   const [query, setQuery] = useState("")
-  const [orders, setOrders] = useState<OrderRow[]>([])
-  const [orderItems, setOrderItems] = useState<OrderItemRow[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
-
-  // Fetch orders + order_items from Supabase and subscribe to realtime
-  useEffect(() => {
-    let mounted = true
-
-    async function fetchOrders() {
-      const [ordersRes, itemsRes] = await Promise.all([
-        supabase.from("orders").select("*").order("created_at", { ascending: false }),
-        supabase.from("order_items").select("product_id, product_name, quantity, price"),
-      ])
-      if (!mounted) return
-      if (ordersRes.data) setOrders(ordersRes.data as OrderRow[])
-      if (itemsRes.data) setOrderItems(itemsRes.data as OrderItemRow[])
-    }
-
-    fetchOrders()
-
-    const channel = supabase
-      .channel("orders-changes")
-      .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, fetchOrders)
-      .on("postgres_changes", { event: "*", schema: "public", table: "order_items" }, fetchOrders)
-      .subscribe()
-
-    return () => {
-      mounted = false
-      supabase.removeChannel(channel)
-    }
-  }, [])
 
   // Dynamic KPIs
   const totalRevenue = orders.reduce((sum, o) => sum + o.total, 0)
@@ -108,7 +62,13 @@ export default function AdminPage() {
 
   const maxRevenue = Math.max(...monthlyRevenue.map((m) => m.value), 1)
 
-  // Top products by quantity sold (from real order_items)
+  // Flatten order items across all orders for top-product aggregation
+  const orderItems: OrderItem[] = useMemo(
+    () => orders.flatMap((o) => o.items ?? []),
+    [orders],
+  )
+
+  // Top products by quantity sold (from order items)
   const topProducts = useMemo(() => {
     const qtyMap = new Map<string, number>()
     for (const item of orderItems) {
@@ -373,7 +333,7 @@ function AddProductModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" onClick={onClose}>
       <div
-        className="w-full max-w-lg rounded-2xl border border-border bg-background p-6 shadow-xl"
+        className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-border bg-background p-6 shadow-xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between">
